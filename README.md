@@ -1,13 +1,13 @@
-![Streamlit](https://img.shields.io/badge/-Streamlit-FF4B4B?style=flat&logo=streamlit&logoColor=white)
-![Python](https://img.shields.io/badge/-Python-3776AB?style=flat&logo=python&logoColor=white)
-![Pandas](https://img.shields.io/badge/-Pandas-150458?style=flat&logo=pandas&logoColor=white)
-![Plotly](https://img.shields.io/badge/-Plotly-3F4F75?style=flat&logo=plotly&logoColor=white)
-
 <div align="center">
   <a href="https://afcon-app-analytics.streamlit.app/">
     <img src="https://raw.githubusercontent.com/muhammadbonn/afcon-streamlit-analytics/main/app_animation.gif" alt="African Football Analytics Dashboard Preview" width="100%">
   </a>
 </div>
+
+![Streamlit](https://img.shields.io/badge/-Streamlit-FF4B4B?style=flat&logo=streamlit&logoColor=white)
+![Python](https://img.shields.io/badge/-Python-3776AB?style=flat&logo=python&logoColor=white)
+![Pandas](https://img.shields.io/badge/-Pandas-150458?style=flat&logo=pandas&logoColor=white)
+![Plotly](https://img.shields.io/badge/-Plotly-3F4F75?style=flat&logo=plotly&logoColor=white)
 
 An interactive data visualization dashboard providing deep insights into the historical performance, rankings, and head-to-head records of African national football teams from 1957 to 2026.
 
