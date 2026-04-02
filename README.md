@@ -1,9 +1,9 @@
-# 🌍 African Football Analytics Dashboard
+<img width="1920" height="1080" alt="image" src="https://github.com/user-attachments/assets/a57bf756-8c6c-4847-b6b5-2a603b80708d" /># 🌍 African Football Analytics Dashboard
 
-[![Streamlit App](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://afcon-app-analytics.streamlit.app/)
-[![Python](https://img.shields.io/badge/Python-3.9+-blue.svg)](https://www.python.org/)
-[![Pandas](https://img.shields.io/badge/Pandas-Data_Processing-150458.svg)](https://pandas.pydata.org/)
-[![Plotly](https://img.shields.io/badge/Plotly-Data_Visualization-3F4F75.svg)](https://plotly.com/)
+[![Streamlit App](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)]
+[![Python](https://img.shields.io/badge/Python-3.9+-blue.svg)]
+[![Pandas](https://img.shields.io/badge/Pandas-Data_Processing-150458.svg)]
+[![Plotly](https://img.shields.io/badge/Plotly-Data_Visualization-3F4F75.svg)]
 
 An interactive data visualization dashboard providing deep insights into the historical performance, rankings, and head-to-head records of African national football teams from 1957 to 2026.
 
@@ -30,8 +30,8 @@ An interactive data visualization dashboard providing deep insights into the his
 **1. Clone the repository:**
 
 ```
-git clone [https://github.com/muhammadbonn/afcon-streamlit-analytics.git](https://github.com/muhammadbonn/afcon-streamlit-analytics.git)
-cd YOUR_REPO_NAME
+git clone https://github.com/muhammadbonn/afcon-streamlit-analytics.git
+cd afcon-streamlit-analytics
 ```
 
 **2. Install dependencies:**
@@ -51,14 +51,13 @@ streamlit run scripts/stream.py
 The project follows a clean, modular architecture (Separation of Concerns) to ensure maintainability and fast execution using Streamlit caching.
 
 ```text
-afcon-streamlit/
-├── data/                               # Processed datasets
-│   └── african_results_with_stages.csv 
+afcon-streamlit-analytics/
+├── data/                                     
+│   ├── all_results.csv                       # Raw dataset
+│   └── african_results_with_stages.csv       # Processed dataset
 ├── scripts/
-│   ├── stream.py                       # Main Streamlit application entry point
-│   └── utils/                          # Modularized helper functions
-│       ├── metrics.py                  # Core statistical and ranking logic
-│       ├── charts.py                   # Plotly visualization components
-│       ├── ui_helpers.py               # Reusable UI widgets
-│       └── tournament.py               # Data staging and extraction
-└── requirements.txt                    # Project dependencies
+│   ├── getting_african_data.py               # Processing data 
+│   ├── stream.py                             # Main Streamlit application entry point
+│   └── utils/                                # Modularized helper functions
+├── requirements.txt                          # Project dependencies
+└── README.md
