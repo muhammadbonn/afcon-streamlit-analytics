@@ -1,12 +1,17 @@
 import os
 import pandas as pd
-import numpy as np
 import streamlit as st
 
+# Importing core logic and metrics
 from utils.tournament import appearances
 from utils.metrics import ranking, hth
-# Importing our new chart functions
-from utils.charts import plot_top_teams_period, plot_top_teams_year, plot_team_evolution, plot_h2h
+
+# Importing chart functions
+from utils.charts import plot_top_teams_period, plot_top_teams_year, plot_h2h
+
+# Importing separated views and UI helpers
+from utils.views import render_team_investigation_view
+from utils.ui_helpers import get_time_selection_ui
 
 # -------------------------------------------------
 # Page Configuration & Description
@@ -23,14 +28,37 @@ st.info("**Context & Scope:** This interactive dashboard provides a comprehensiv
 "performance metrics, and all-time rankings for African national teams across major tournaments.")
 
 # -------------------------------------------------
-# Reading Raw Data
+# Caching & Data Loading Engine
 # -------------------------------------------------
-current_dir = os.path.dirname(os.path.abspath(__file__))
-path = os.path.join(current_dir, '../data/african_results_with_stages.csv')
-raw_data = pd.read_csv(path)
+@st.cache_data
+def load_and_prepare_data(tournament_scope):
+    """
+    Loads and caches data to dramatically improve dashboard performance.
+    Reloads only when the tournament filter changes.
+    """
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    path = os.path.join(current_dir, '../data/african_results_with_stages.csv')
+    raw_data = pd.read_csv(path)
+
+    # Apply global filtering based on sidebar selection
+    if tournament_scope == 'African Cup of Nations':
+        filtered_data = raw_data[raw_data['tournament'] == 'African Cup of Nations'].copy()
+    else:
+        filtered_data = raw_data.copy()
+
+    # Generate core aggregated dataframes
+    app_df = appearances(filtered_data)
+    all_time_df = ranking(app_df)
+
+    # Extract dynamic lists for dropdown menus
+    teams_list = sorted(all_time_df['team'].unique().tolist())
+    top10_list = all_time_df.head(10)['team'].tolist()
+    top20_list = all_time_df.head(20)['team'].tolist()
+
+    return filtered_data, app_df, teams_list, top10_list, top20_list
 
 # -------------------------------------------------
-# Global Tournament Filter (Sidebar)
+# Global Settings (Sidebar)
 # -------------------------------------------------
 st.sidebar.header("⚙️ Global Settings")
 tournament_scope = st.sidebar.selectbox(
@@ -38,156 +66,58 @@ tournament_scope = st.sidebar.selectbox(
     ['All Competitions', 'African Cup of Nations']
 )
 
-# Apply global filtering logic based on user selection
-if tournament_scope == 'African Cup of Nations':
-    data = raw_data[raw_data['tournament'] == 'African Cup of Nations'].copy()
-else:
-    data = raw_data.copy()
-
-# -------------------------------------------------
-# Preparing Dynamic Dataframes
-# -------------------------------------------------
-# These dataframes and lists will automatically update based on the global filter
-appearances_df = appearances(data)
-all_time = ranking(appearances_df)
-
-# Extracting basic lists for dropdowns
-all_teams = sorted(all_time['team'].unique().tolist())
-top10_teams = all_time.head(10)['team'].tolist()
-top20_teams = all_time.head(20)['team'].tolist()
+# Fetching data using our cached function
+data, appearances_df, all_teams, top10_teams, top20_teams = load_and_prepare_data(tournament_scope)
 
 # -------------------------------------------------
 # Sidebar Main Menu
 # -------------------------------------------------
-st.sidebar.markdown("---") # Visual separator in the sidebar
+st.sidebar.markdown("---") 
 first_view_option = st.sidebar.selectbox(
     "What Do You Want to See:",
     ['Investigate Specific Team', 'Ranking Teams', 'Head-to-Head']
 )
 
 # =================================================
-# 1. Ranking Teams
+# 1. Ranking Teams View
 # =================================================
 if first_view_option == 'Ranking Teams':
-    time_option = st.sidebar.selectbox(
-        "What Years are You Intersted in:",
-        ['Ranking Over Specific Period', 'Ranking in Specific Year']
-    )
     
-    if time_option == 'Ranking Over Specific Period':
+    # Using our custom reusable UI helper!
+    time_type, start_val, end_val = get_time_selection_ui(key_prefix="rank_view")
+    
+    if time_type == 'period':
         st.subheader("🌍 Ranking Over Specific Period")
         
-        start_year, end_year = st.sidebar.slider(
-            "Select Period:",
-            min_value=1957, max_value=2026, value=(1957, 2026)
-        )
-        
-        result_df = ranking(appearances_df, start=start_year, end=end_year)
-        
-        # Calling the chart function from utils
-        fig = plot_top_teams_period(result_df, start_year, end_year)
+        result_df = ranking(appearances_df, start=start_val, end=end_val)
+        fig = plot_top_teams_period(result_df, start_val, end_val)
         st.plotly_chart(fig, use_container_width=True)
         
         with st.expander("📊 View Raw Data (All Teams)"):
             st.dataframe(result_df)
 
-    elif time_option == 'Ranking in Specific Year':
+    elif time_type == 'year':
         st.subheader("📅 Ranking in Specific Year")
         
-        years_list = list(range(1957, 2027))
-        specific_year = st.sidebar.selectbox(
-            "Select Year:", years_list, index=len(years_list) - 1
-        )
-        
-        result_df = ranking(df=appearances_df, year=specific_year)
+        result_df = ranking(df=appearances_df, year=start_val)
         
         if not result_df.empty:
-            # Calling the chart function from utils
-            fig = plot_top_teams_year(result_df, specific_year)
+            fig = plot_top_teams_year(result_df, start_val)
             st.plotly_chart(fig, use_container_width=True)
-            
             with st.expander("📊 View Raw Data"):
                 st.dataframe(result_df)
         else:
             st.warning("No matches found for this year.")
 
 # =================================================
-# 2. Investigate Specific Team
+# 2. Investigate Specific Team View 
 # =================================================
 elif first_view_option == 'Investigate Specific Team':
-    selected_team = st.sidebar.selectbox(
-        "Select Desired Team:",
-        all_teams, index=None, placeholder="Type or select a team..."
-    )
-    
-    if selected_team:
-        st.success(f"Investigating: {selected_team}")
-        
-        time_option = st.sidebar.selectbox(
-            "What Years are You Intersted in:",
-            ['Ranking Over Specific Period', 'Ranking in Specific Year']
-        )
-        
-        if time_option == 'Ranking Over Specific Period':
-            st.subheader(f"📈 {selected_team} Evolution Over Period")
-            
-            start_year, end_year = st.sidebar.slider(
-                "Select Period:", min_value=1957, max_value=2026, value=(1957, 2026)
-            )
-
-            years_to_investigate = range(start_year, end_year + 1) 
-            all_years_data = []
-
-            for year in years_to_investigate:
-                yearly_rank = ranking(appearances_df, year=year)
-                team_data = yearly_rank[yearly_rank['team'] == selected_team]
-                
-                if not team_data.empty: 
-                    team_data = team_data.copy()
-                    team_data['year'] = year
-                    all_years_data.append(team_data)
-
-            if all_years_data:
-                evolution_df = pd.concat(all_years_data, ignore_index=True)
-                
-                # Calling the chart function from utils
-                fig = plot_team_evolution(evolution_df, selected_team, start_year, end_year)
-                st.plotly_chart(fig, use_container_width=True)
-                
-                with st.expander("📊 View Yearly Breakdown Data"):
-                    st.dataframe(evolution_df[['year', 'Rank', 'matches', 'wins', 'draws', 'losses', 'total_points', 'win_%']])
-            else:
-                st.warning(f"No matches found for {selected_team} in this period.")
-
-        elif time_option == 'Ranking in Specific Year':
-            st.subheader(f"🎯 {selected_team} Performance in {specific_year if 'specific_year' in locals() else 'Selected Year'}")
-            
-            years_list = list(range(1957, 2027))
-            specific_year = st.sidebar.selectbox(
-                "Select Year:", years_list, index=len(years_list) - 1
-            )
-            
-            yearly_rank = ranking(appearances_df, year=specific_year)
-            team_data = yearly_rank[yearly_rank['team'] == selected_team]
-            
-            if not team_data.empty:
-                st.markdown(f"### Rank: #{team_data['Rank'].values[0]}")
-                
-                col1, col2, col3, col4 = st.columns(4)
-                col1.metric("Matches Played", int(team_data['matches'].values[0]))
-                col2.metric("Wins", int(team_data['wins'].values[0]))
-                col3.metric("Win Rate", f"{int(team_data['win_%'].values[0])}%")
-                col4.metric("Total Points", int(team_data['total_points'].values[0]))
-                
-                col5, col6, col7 = st.columns(3)
-                col5.metric("Goals For (GF)", int(team_data['GF'].values[0]))
-                col6.metric("Goals Against (GA)", int(team_data['GA'].values[0]))
-                col7.metric("Goal Difference (GD)", int(team_data['GD'].values[0]))
-            else:
-                st.warning(f"{selected_team} did not play any matches in {specific_year}.")
+    # Using the separated view module
+    render_team_investigation_view(appearances_df, all_teams)
 
 # =================================================
-# 3. Head-to-Head
+# 3. Head-to-Head View
 # =================================================
 elif first_view_option == 'Head-to-Head':
     selected_team = st.sidebar.selectbox(
@@ -214,19 +144,14 @@ elif first_view_option == 'Head-to-Head':
 
         if selected_opponents:
             st.subheader(f"⚔️ {selected_team} vs Opponents")
-            
             h2h_data = hth(
-                team=selected_team, 
-                matches_data=data, 
-                appearances_data=appearances_df, 
-                vs=selected_opponents
+                team=selected_team, matches_data=data, 
+                appearances_data=appearances_df, vs=selected_opponents
             )
             
             if not h2h_data.empty:
-                # Calling the chart function from utils
                 fig = plot_h2h(h2h_data, selected_team)
                 st.plotly_chart(fig, use_container_width=True)
-                
                 with st.expander("📊 View Detailed Head-to-Head Records"):
                     st.dataframe(h2h_data)
             else:
