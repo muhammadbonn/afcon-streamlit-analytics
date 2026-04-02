@@ -1,6 +1,7 @@
 import pandas as pd
 import numpy as np
 import streamlit as st
+import os
 
 from utils.tournament import appearances
 from utils.metrics import ranking, hth
@@ -22,7 +23,8 @@ st.info("**Context & Scope:** This interactive dashboard provides a comprehensiv
 # -------------------------------------------------
 # Reading & Preparing Data
 # -------------------------------------------------
-path = '../data/african_results_with_stages.csv'
+current_dir = os.path.dirname(os.path.abspath(__file__))
+path = os.path.join(current_dir, '../data/african_results_with_stages.csv')
 data = pd.read_csv(path)
 
 # Creating Dataframes
