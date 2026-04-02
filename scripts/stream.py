@@ -23,13 +23,31 @@ st.info("**Context & Scope:** This interactive dashboard provides a comprehensiv
 "performance metrics, and all-time rankings for African national teams across major tournaments.")
 
 # -------------------------------------------------
-# Reading & Preparing Data
+# Reading Raw Data
 # -------------------------------------------------
 current_dir = os.path.dirname(os.path.abspath(__file__))
 path = os.path.join(current_dir, '../data/african_results_with_stages.csv')
-data = pd.read_csv(path)
+raw_data = pd.read_csv(path)
 
-# Creating Dataframes
+# -------------------------------------------------
+# Global Tournament Filter (Sidebar)
+# -------------------------------------------------
+st.sidebar.header("⚙️ Global Settings")
+tournament_scope = st.sidebar.selectbox(
+    "Select Tournament Scope:",
+    ['All Competitions', 'African Cup of Nations']
+)
+
+# Apply global filtering logic based on user selection
+if tournament_scope == 'African Cup of Nations':
+    data = raw_data[raw_data['tournament'] == 'African Cup of Nations'].copy()
+else:
+    data = raw_data.copy()
+
+# -------------------------------------------------
+# Preparing Dynamic Dataframes
+# -------------------------------------------------
+# These dataframes and lists will automatically update based on the global filter
 appearances_df = appearances(data)
 all_time = ranking(appearances_df)
 
@@ -41,6 +59,7 @@ top20_teams = all_time.head(20)['team'].tolist()
 # -------------------------------------------------
 # Sidebar Main Menu
 # -------------------------------------------------
+st.sidebar.markdown("---") # Visual separator in the sidebar
 first_view_option = st.sidebar.selectbox(
     "What Do You Want to See:",
     ['Investigate Specific Team', 'Ranking Teams', 'Head-to-Head']
