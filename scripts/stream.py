@@ -1,10 +1,12 @@
+import os
 import pandas as pd
 import numpy as np
 import streamlit as st
-import os
 
 from utils.tournament import appearances
 from utils.metrics import ranking, hth
+# Importing our new chart functions
+from utils.charts import plot_top_teams_period, plot_top_teams_year, plot_team_evolution, plot_h2h
 
 # -------------------------------------------------
 # Page Configuration & Description
@@ -56,14 +58,19 @@ if first_view_option == 'Ranking Teams':
     if time_option == 'Ranking Over Specific Period':
         st.subheader("🌍 Ranking Over Specific Period")
         
-        # Slider to select a time range
         start_year, end_year = st.sidebar.slider(
             "Select Period:",
             min_value=1957, max_value=2026, value=(1957, 2026)
         )
         
         result_df = ranking(appearances_df, start=start_year, end=end_year)
-        st.dataframe(result_df)
+        
+        # Calling the chart function from utils
+        fig = plot_top_teams_period(result_df, start_year, end_year)
+        st.plotly_chart(fig, use_container_width=True)
+        
+        with st.expander("📊 View Raw Data (All Teams)"):
+            st.dataframe(result_df)
 
     elif time_option == 'Ranking in Specific Year':
         st.subheader("📅 Ranking in Specific Year")
@@ -74,7 +81,16 @@ if first_view_option == 'Ranking Teams':
         )
         
         result_df = ranking(df=appearances_df, year=specific_year)
-        st.dataframe(result_df)
+        
+        if not result_df.empty:
+            # Calling the chart function from utils
+            fig = plot_top_teams_year(result_df, specific_year)
+            st.plotly_chart(fig, use_container_width=True)
+            
+            with st.expander("📊 View Raw Data"):
+                st.dataframe(result_df)
+        else:
+            st.warning("No matches found for this year.")
 
 # =================================================
 # 2. Investigate Specific Team
@@ -85,7 +101,6 @@ elif first_view_option == 'Investigate Specific Team':
         all_teams, index=None, placeholder="Type or select a team..."
     )
     
-    # Proceed only if a team is selected
     if selected_team:
         st.success(f"Investigating: {selected_team}")
         
@@ -101,41 +116,54 @@ elif first_view_option == 'Investigate Specific Team':
                 "Select Period:", min_value=1957, max_value=2026, value=(1957, 2026)
             )
 
-            # Build Time Evolution DataFrame
-            # Added +1 to ensure the end_year is included in the range
             years_to_investigate = range(start_year, end_year + 1) 
             all_years_data = []
 
             for year in years_to_investigate:
                 yearly_rank = ranking(appearances_df, year=year)
-                # Filter specifically for the selected team
                 team_data = yearly_rank[yearly_rank['team'] == selected_team]
                 
-                # Check if the team actually played matches in this specific year
                 if not team_data.empty: 
+                    team_data = team_data.copy()
+                    team_data['year'] = year
                     all_years_data.append(team_data)
 
-            # Display the concatenated dataframe if data exists
             if all_years_data:
                 evolution_df = pd.concat(all_years_data, ignore_index=True)
-                st.dataframe(evolution_df)
+                
+                # Calling the chart function from utils
+                fig = plot_team_evolution(evolution_df, selected_team, start_year, end_year)
+                st.plotly_chart(fig, use_container_width=True)
+                
+                with st.expander("📊 View Yearly Breakdown Data"):
+                    st.dataframe(evolution_df[['year', 'Rank', 'matches', 'wins', 'draws', 'losses', 'total_points', 'win_%']])
             else:
                 st.warning(f"No matches found for {selected_team} in this period.")
 
         elif time_option == 'Ranking in Specific Year':
-            st.subheader(f"🎯 {selected_team} Ranking in Specific Year")
+            st.subheader(f"🎯 {selected_team} Performance in {specific_year if 'specific_year' in locals() else 'Selected Year'}")
             
             years_list = list(range(1957, 2027))
             specific_year = st.sidebar.selectbox(
                 "Select Year:", years_list, index=len(years_list) - 1
             )
             
-            # Calculate ranking for the year and isolate the selected team
             yearly_rank = ranking(appearances_df, year=specific_year)
             team_data = yearly_rank[yearly_rank['team'] == selected_team]
             
             if not team_data.empty:
-                st.dataframe(team_data)
+                st.markdown(f"### Rank: #{team_data['Rank'].values[0]}")
+                
+                col1, col2, col3, col4 = st.columns(4)
+                col1.metric("Matches Played", int(team_data['matches'].values[0]))
+                col2.metric("Wins", int(team_data['wins'].values[0]))
+                col3.metric("Win Rate", f"{int(team_data['win_%'].values[0])}%")
+                col4.metric("Total Points", int(team_data['total_points'].values[0]))
+                
+                col5, col6, col7 = st.columns(3)
+                col5.metric("Goals For (GF)", int(team_data['GF'].values[0]))
+                col6.metric("Goals Against (GA)", int(team_data['GA'].values[0]))
+                col7.metric("Goal Difference (GD)", int(team_data['GD'].values[0]))
             else:
                 st.warning(f"{selected_team} did not play any matches in {specific_year}.")
 
@@ -154,36 +182,33 @@ elif first_view_option == 'Head-to-Head':
             ['Top 10 Teams (All Time)', 'Top 20 Teams (All Time)', 'Specific Team/Teams']
         )
         
+        selected_opponents = []
         if opponent_type == 'Specific Team/Teams':
             selected_opponents = st.sidebar.multiselect(
                 "Select Opponent Team/Teams:",
                 all_teams, placeholder="Choose one or more teams..." 
             )
-            
-            if selected_opponents:
-                st.subheader(f"⚔️ {selected_team} vs Selected Opponents")
-                # Passed both matches_data and appearances_data to the hth function
-                st.dataframe(hth(
-                    team=selected_team, 
-                    matches_data=data, 
-                    appearances_data=appearances_df, 
-                    vs=selected_opponents
-                ))
-
         elif opponent_type == 'Top 10 Teams (All Time)':
-            st.subheader(f"⚔️ {selected_team} vs Top 10 Teams")
-            st.dataframe(hth(
-                team=selected_team, 
-                matches_data=data, 
-                appearances_data=appearances_df, 
-                vs=top10_teams
-            ))
-
+            selected_opponents = top10_teams
         elif opponent_type == 'Top 20 Teams (All Time)':
-            st.subheader(f"⚔️ {selected_team} vs Top 20 Teams")
-            st.dataframe(hth(
+            selected_opponents = top20_teams
+
+        if selected_opponents:
+            st.subheader(f"⚔️ {selected_team} vs Opponents")
+            
+            h2h_data = hth(
                 team=selected_team, 
                 matches_data=data, 
                 appearances_data=appearances_df, 
-                vs=top20_teams
-            ))
+                vs=selected_opponents
+            )
+            
+            if not h2h_data.empty:
+                # Calling the chart function from utils
+                fig = plot_h2h(h2h_data, selected_team)
+                st.plotly_chart(fig, use_container_width=True)
+                
+                with st.expander("📊 View Detailed Head-to-Head Records"):
+                    st.dataframe(h2h_data)
+            else:
+                st.info("No match history found between the selected teams.")
