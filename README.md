@@ -5,7 +5,7 @@
 
 An interactive data visualization dashboard providing deep insights into the historical performance, rankings, and head-to-head records of African national football teams from 1957 to 2026.
 
-**[View Live Dashboard Here](https://afcon-app-analytics.streamlit.app/)**
+**[View Interactive Dashboard Here](https://afcon-app-analytics.streamlit.app/)**
 
 ## Key Features
 * **Global Filtering:** Toggle instantly between *All African Competitions* and strictly *African Cup of Nations (AFCON)* matches.
