@@ -7,10 +7,9 @@ from utils.tournament import appearances
 from utils.metrics import ranking, hth
 
 # Importing chart functions
-from utils.charts import plot_top_teams_period, plot_top_teams_year, plot_h2h
+from utils.charts import plot_top_teams_period, plot_top_teams_year, plot_team_evolution, plot_h2h
 
-# Importing separated views and UI helpers
-from utils.views import render_team_investigation_view
+# Importing our reusable UI helper (Only this one!)
 from utils.ui_helpers import get_time_selection_ui
 
 # -------------------------------------------------
@@ -83,7 +82,7 @@ first_view_option = st.sidebar.selectbox(
 # =================================================
 if first_view_option == 'Ranking Teams':
     
-    # Using our custom reusable UI helper!
+    # Using our custom reusable UI helper with a unique prefix!
     time_type, start_val, end_val = get_time_selection_ui(key_prefix="rank_view")
     
     if time_type == 'period':
@@ -113,8 +112,64 @@ if first_view_option == 'Ranking Teams':
 # 2. Investigate Specific Team View 
 # =================================================
 elif first_view_option == 'Investigate Specific Team':
-    # Using the separated view module
-    render_team_investigation_view(appearances_df, all_teams)
+    selected_team = st.sidebar.selectbox(
+        "Select Desired Team:",
+        all_teams, index=None, placeholder="Type or select a team..."
+    )
+    
+    if selected_team:
+        st.success(f"Investigating: {selected_team}")
+        
+        # Using the exact same helper, but with a different prefix to avoid conflicts
+        time_type, start_val, end_val = get_time_selection_ui(key_prefix="team_view")
+        
+        if time_type == 'period':
+            st.subheader(f"📈 {selected_team} Evolution Over Period")
+            
+            years_to_investigate = range(start_val, end_val + 1) 
+            all_years_data = []
+
+            for year in years_to_investigate:
+                yearly_rank = ranking(appearances_df, year=year)
+                team_data = yearly_rank[yearly_rank['team'] == selected_team]
+                
+                if not team_data.empty: 
+                    team_data = team_data.copy()
+                    team_data['year'] = year
+                    all_years_data.append(team_data)
+
+            if all_years_data:
+                evolution_df = pd.concat(all_years_data, ignore_index=True)
+                
+                fig = plot_team_evolution(evolution_df, selected_team, start_val, end_val)
+                st.plotly_chart(fig, use_container_width=True)
+                
+                with st.expander("📊 View Yearly Breakdown Data"):
+                    st.dataframe(evolution_df[['year', 'Rank', 'matches', 'wins', 'draws', 'losses', 'total_points', 'win_%']])
+            else:
+                st.warning(f"No matches found for {selected_team} in this period.")
+
+        elif time_type == 'year':
+            st.subheader(f"🎯 {selected_team} Performance in {start_val}")
+            
+            yearly_rank = ranking(appearances_df, year=start_val)
+            team_data = yearly_rank[yearly_rank['team'] == selected_team]
+            
+            if not team_data.empty:
+                st.markdown(f"### Global Rank: #{team_data['Rank'].values[0]}")
+                
+                col1, col2, col3, col4 = st.columns(4)
+                col1.metric("Matches Played", int(team_data['matches'].values[0]))
+                col2.metric("Wins", int(team_data['wins'].values[0]))
+                col3.metric("Win Rate", f"{int(team_data['win_%'].values[0])}%")
+                col4.metric("Total Points", int(team_data['total_points'].values[0]))
+                
+                col5, col6, col7 = st.columns(3)
+                col5.metric("Goals For (GF)", int(team_data['GF'].values[0]))
+                col6.metric("Goals Against (GA)", int(team_data['GA'].values[0]))
+                col7.metric("Goal Difference (GD)", int(team_data['GD'].values[0]))
+            else:
+                st.warning(f"{selected_team} did not play any matches in {start_val}.")
 
 # =================================================
 # 3. Head-to-Head View
