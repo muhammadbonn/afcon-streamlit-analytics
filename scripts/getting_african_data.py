@@ -5,7 +5,7 @@ from utils.assumptions import (
     tournament_weight, stage_weight
 )
 
-# Geting subset of large data for only african temas
+# Geting subset of large data for only african teams
 path = '../data/all_results.csv'
 african_results = getting_african_data(path)
 
