@@ -1,6 +1,6 @@
 <div align="center">
   <a href="https://afcon-app-analytics.streamlit.app/">
-    <img src="https://raw.githubusercontent.com/muhammadbonn/afcon-streamlit-analytics/main/app_animation.gif" alt="African Football Analytics Dashboard Preview" width="100%">
+    <img src="https://raw.githubusercontent.com/muhammadbonn/afcon-streamlit-analytics/main/app_animation.gif"> alt="African Football Analytics Dashboard Preview" width="100%">
   </a>
 </div>
 
